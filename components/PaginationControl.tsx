@@ -1,8 +1,8 @@
+// components/PaginationControl.tsx
 'use client';
 
 import { Button } from '@/components/ui/button';
-import { usePathname, useSearchParams } from 'next/navigation';
-import Link from 'next/link';
+import { usePathname, useSearchParams, useRouter } from 'next/navigation';
 
 interface PaginationControlProps {
   currentPage: number;
@@ -12,18 +12,21 @@ interface PaginationControlProps {
 export function PaginationControl({
   currentPage,
   totalPages,
-}: PaginationControlProps): React.ReactNode {
+}: PaginationControlProps): React.ReactElement {
   const searchParams = useSearchParams();
   const pathname = usePathname();
+  const router = useRouter();
 
-  const createPageURL = (pageNumber: number): string => {
+  // Function to handle page changes
+  const handlePageChange = (pageNumber: number) => {
     const params = new URLSearchParams(searchParams.toString());
     params.set('page', pageNumber.toString());
-    return `${pathname}?${params.toString()}`;
+    router.push(`${pathname}?${params.toString()}`);
   };
 
+  // Calculate the page range to display
   const getPageRange = (): number[] => {
-    const delta = 2;
+    const delta = 2; // Number of pages to show on each side of current page
     const range: number[] = [];
 
     for (
@@ -34,13 +37,15 @@ export function PaginationControl({
       range.push(i);
     }
 
+    // Add first and last pages
     if (currentPage - delta > 2) {
-      range.unshift(-1);
+      range.unshift(-1); // Represents ellipsis
     }
     if (currentPage + delta < totalPages - 1) {
-      range.push(-1);
+      range.push(-1); // Represents ellipsis
     }
 
+    // Always include first and last page
     if (totalPages > 1) {
       range.unshift(1);
       range.push(totalPages);
@@ -51,8 +56,12 @@ export function PaginationControl({
 
   return (
     <div className="flex items-center gap-2">
-      <Button variant="outline" disabled={currentPage <= 1} asChild>
-        <Link href={createPageURL(currentPage - 1)}>Previous</Link>
+      <Button
+        variant="outline"
+        disabled={currentPage <= 1}
+        onClick={() => handlePageChange(currentPage - 1)}
+      >
+        Previous
       </Button>
 
       <div className="flex gap-1">
@@ -62,15 +71,23 @@ export function PaginationControl({
               ...
             </div>
           ) : (
-            <Button key={page} variant={page === currentPage ? 'default' : 'outline'} asChild>
-              <Link href={createPageURL(page)}>{page}</Link>
+            <Button
+              key={page}
+              variant={page === currentPage ? 'default' : 'outline'}
+              onClick={() => handlePageChange(page)}
+            >
+              {page}
             </Button>
           )
         )}
       </div>
 
-      <Button variant="outline" disabled={currentPage >= totalPages} asChild>
-        <Link href={createPageURL(currentPage + 1)}>Next</Link>
+      <Button
+        variant="outline"
+        disabled={currentPage >= totalPages}
+        onClick={() => handlePageChange(currentPage + 1)}
+      >
+        Next
       </Button>
     </div>
   );

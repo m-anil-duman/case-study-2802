@@ -8,7 +8,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 
 interface FilterBarProps {
   initialStatus?: string;
@@ -23,6 +23,9 @@ export function FilterBar({
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
+  // Add a ref to track if this is the initial render
+  const isInitialRender = useRef(true);
+
   const [status, setStatus] = useState(() => {
     const urlStatus = searchParams.get('status');
     const validStatuses = ['all', 'alive', 'dead', 'unknown'];
@@ -35,38 +38,71 @@ export function FilterBar({
     return validGenders.includes(urlGender || '') ? urlGender || initialGender : initialGender;
   });
 
-  useEffect(() => {
+  // Create direct handler functions instead of relying solely on the effect
+  const handleStatusChange = (newStatus: string) => {
+    console.log('Status change triggered:', newStatus);
+    setStatus(newStatus);
+
+    // Directly update the URL when status changes
     const params = new URLSearchParams(searchParams.toString());
 
-    if (status === 'all') {
+    if (newStatus === 'all') {
       params.delete('status');
     } else {
-      params.set('status', status);
+      params.set('status', newStatus);
     }
 
-    if (gender === 'all') {
-      params.delete('gender');
-    } else {
-      params.set('gender', gender);
-    }
-
+    // Reset to page 1 when filters change
     params.set('page', '1');
 
-    const newUrl = `${pathname}?${params.toString()}`;
+    router.push(`${pathname}?${params.toString()}`);
+  };
 
-    router.push(newUrl);
-  }, [status, gender, pathname, router, searchParams]);
+  const handleGenderChange = (newGender: string) => {
+    console.log('Gender change triggered:', newGender);
+    setGender(newGender);
+
+    // Directly update the URL when gender changes
+    const params = new URLSearchParams(searchParams.toString());
+
+    if (newGender === 'all') {
+      params.delete('gender');
+    } else {
+      params.set('gender', newGender);
+    }
+
+    // Reset to page 1 when filters change
+    params.set('page', '1');
+
+    router.push(`${pathname}?${params.toString()}`);
+  };
+
+  // Use effect only for initial synchronization, not for ongoing updates
+  useEffect(() => {
+    // Skip the effect on the initial render
+    if (isInitialRender.current) {
+      isInitialRender.current = false;
+      return;
+    }
+
+    // This effect now only runs when the URL changes externally
+    // (such as from clicking back/forward buttons)
+    const urlStatus = searchParams.get('status') || 'all';
+    const urlGender = searchParams.get('gender') || 'all';
+
+    if (urlStatus !== status) {
+      setStatus(urlStatus);
+    }
+
+    if (urlGender !== gender) {
+      setGender(urlGender);
+    }
+  }, [searchParams, status, gender]);
 
   return (
     <div className="flex flex-col sm:flex-row gap-4 mb-6">
       <div className="w-full sm:w-1/2">
-        <Select
-          value={status}
-          onValueChange={(newStatus) => {
-            console.log('Status change triggered:', newStatus);
-            setStatus(newStatus);
-          }}
-        >
+        <Select value={status} onValueChange={handleStatusChange}>
           <SelectTrigger>
             <SelectValue placeholder="Filter by status">
               {status === 'all' ? 'All Statuses' : status.charAt(0).toUpperCase() + status.slice(1)}
@@ -82,13 +118,7 @@ export function FilterBar({
       </div>
 
       <div className="w-full sm:w-1/2">
-        <Select
-          value={gender}
-          onValueChange={(newGender) => {
-            console.log('Gender change triggered:', newGender);
-            setGender(newGender);
-          }}
-        >
+        <Select value={gender} onValueChange={handleGenderChange}>
           <SelectTrigger>
             <SelectValue placeholder="Filter by gender">
               {gender === 'all' ? 'All Genders' : gender.charAt(0).toUpperCase() + gender.slice(1)}
